@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Maintenance Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        section {
+            padding: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        form {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin: 0.5rem 0 0.2rem;
+        }
+
+        input, button, select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .task {
+            border: 1px solid #ccc;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .task.completed {
+            text-decoration: line-through;
+            background-color: #d4edda;
+        }
+
+        .task button {
+            margin-right: 0.5rem;
+        }
+
+        .filter {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Vehicle Maintenance Tracker</h1>
+    </header>
+
+    <section>
+        <h2>Add Tasks</h2>
+        <form id="vehicle-form">
+            <label for="make">Vehicle Name:</label>
+            <input type="text" id="make" name="make" placeholder="e.g., Toyota" required>
+            <label for="model">Vehicle Model:</label>
+            <input type="text" id="model" name="model" placeholder="e.g., Corolla" required>
+            <label for="description">Task Description:</label>
+            <input type="text" id="description" name="description" placeholder="e.g., Oil Change" required>
+            <label for="date">Due Date:</label>
+            <input type="date" id="date" name="date" required>
+            
+            <button type="submit">Add Task</button>
+        </form>
+
+        <div class="filter">
+            <label for="filter">Filter Tasks:</label>
+            <select id="filter">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+            </select>
+        </div>
+
+        <div id="records"></div>
+    </section>
+
+    <script src="store.legacy.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('vehicle-form');
+            const recordsDiv = document.getElementById('records');
+            const filterSelect = document.getElementById('filter');
+            let editIndex = null; 
+            
+            displayTasks();
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const task = {
+                    make: form.make.value,
+                    model: form.model.value,
+                    description: form.description.value,
+                    date: form.date.value,
+                    status: 'Pending'
+                };
+
+                if (editIndex !== null) {
+                    updateTask(editIndex, task);
+                    editIndex = null;
+                } else {
+                    addTask(task);
+                }
+
+                form.reset();
+                displayTasks();
+            });
+
+            filterSelect.addEventListener('change', displayTasks);
+
+            function displayTasks() {
+                const tasks = getTasks();
+                const filter = filterSelect.value;
+                recordsDiv.innerHTML = '';
+
+                tasks.forEach((task, index) => {
+                    if (filter === 'all' || filter.toLowerCase() === task.status.toLowerCase()) {
+                        const taskDiv = document.createElement('div');
+                        taskDiv.className = `task ${task.status.toLowerCase() === 'completed' ? 'completed' : ''}`;
+
+                        taskDiv.innerHTML = `
+                            <p><strong>Vehicle:</strong> ${task.make} ${task.model}</p>
+                            <p><strong>Task:</strong> ${task.description}</p>
+                            <p><strong>Date:</strong> ${task.date}</p>
+                            <p><strong>Status:</strong> ${task.status}</p>
+                            <button onclick="markComplete(${index})">Mark as Complete</button>
+                            <button onclick="editTask(${index})">Edit</button>
+                            <button onclick="deleteTask(${index})">Delete</button>
+                        `;
+
+                        recordsDiv.appendChild(taskDiv);
+                    }
+                });
+            }
+
+            window.markComplete = (index) => {
+                const tasks = getTasks();
+                tasks[index].status = 'Completed';
+                saveTasks(tasks);
+                displayTasks();
+            };
+
+            window.editTask = (index) => {
+                const tasks = getTasks();
+                const task = tasks[index];
+
+                form.make.value = task.make;
+                form.model.value = task.model;
+                form.description.value = task.description;
+                form.date.value = task.date;
+
+                editIndex = index;
+            };
+
+            window.deleteTask = (index) => {
+                deleteTask(index);
+                displayTasks();
+            };
+
+            function saveTasks(tasks) {
+                store.set('tasks', tasks);
+            }
+
+            function getTasks() {
+                return store.get('tasks') || [];
+            }
+
+            function addTask(task) {
+                const tasks = getTasks();
+                tasks.push(task);
+                saveTasks(tasks);
+            }
+
+            function updateTask(index, updatedTask) {
+                const tasks = getTasks();
+                tasks[index] = updatedTask;
+                saveTasks(tasks);
+            }
+
+            function deleteTask(index) {
+                const tasks = getTasks();
+                tasks.splice(index, 1);
+                saveTasks(tasks);
+            }
+        });
+    </script>
+</body>
+</html>
